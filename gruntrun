@@ -35,7 +35,7 @@ parser = OptionParser(usage = usage)
 parser.add_option('-i', '--input', dest='input',
                   metavar='FILE',
                   help = 'Specify a file to be included as standard input for the program on the remote machine.  If FILE is a hyphen (-), then standard input will be read and passed along as standard input on the remote.')
-#gruntlib.addcommonoptions(parser)
+gruntlib.addcommonoptions(parser)
 (options, args) = parser.parse_args()
 
 if len(args) != 2:
@@ -49,6 +49,9 @@ outfile.flush()
 gnupg = GnuPGInterface.GnuPG()
 gnupg.options.meta_interactive = 1
 gnupg.options.armor = 1
+gpgargs = ['--sign']
+gpgargs.extend(gruntlib.getencryptoptions(options, gruntlib.getconfig(),
+                                          args[0]))
 process = gnupg.run(['--sign'],
                     create_fhs=['stdin'],
                     attach_fhs={'stdout': outfile})

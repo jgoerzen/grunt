@@ -127,6 +127,8 @@ def gettmpfilename():
 def scanfileforlines(file, lines):
     fd = open(file)
     for line in fd.xreadlines():
+        if line[0] == '#':
+            continue
         if line.strip() in lines:
             fd.close()
             return 1
@@ -169,8 +171,29 @@ def emailopen(dest):
     return (user, outfile)
 
 def addcommonoptions(parser):
-    parser.add_option('-s', '--status-to', dest='status',
-                      metavar='EMAIL_ADDRESS',
-                      help = """Delivers output or command status
-                      from a successful invocation to EMAIL_ADDRESS
-                      (UUCP users can specify a bang path here).""")
+    #parser.add_option('-s', '--status-to', dest='status',
+    #                  metavar='EMAIL_ADDRESS',
+    #                  help = """Delivers output or command status
+    #                  from a successful invocation to EMAIL_ADDRESS
+    #                  (UUCP users can specify a bang path here).""")
+    parser.add_option("-e", "--encrypt", dest = 'encrypt',
+                      metavar='RECIPIENT', help = 'Encrypt data to RECIPIENT')
+
+
+def getconfig():
+    config = ConfigParser()
+    if os.path.isfile(getgrunthome() + '/config'):
+        config.read(getgrunthome() + '/config')
+    return config
+
+def getencryptoptions(options, config, dest):
+    if options.encrypt:
+        print "Data will be encrypted as specified on command line."
+        return ['--encrypt', '--recipient', options.encrypt]
+    if config.has_option('destination ' + dest, 'encryptkey'):
+        print "Data will be encrypted as specified in config file."
+        return ['--encrypt', '--recipient',
+                config.get('destination ' + dest, 'encryptkey')]
+    print "Data will not be encrypted for transit, but will be signed."
+    return []
+    

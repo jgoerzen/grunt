@@ -34,9 +34,7 @@ usage = """
     dest-filename is the location to place the data in on the remote."""
 
 parser = OptionParser(usage = usage)
-parser.add_option("-e", "--encrypt", dest = 'encrypt',
-                  metavar='RECIPIENT', help = 'Encrypt data to RECIPIENT')
-#gruntlib.addcommonoptions(parser)
+gruntlib.addcommonoptions(parser)
 (options, args) = parser.parse_args()
 
 if len(args) != 3:
@@ -59,8 +57,8 @@ gnupg = GnuPGInterface.GnuPG()
 gnupg.options.meta_interactive = 1
 gnupg.options.armor = 1
 gpgargs = ['--sign']
-if options.encrypt:
-    gpgargs.extend(['--encrypt', '--recipient', options.encrypt])
+gpgargs.extend(gruntlib.getencryptoptions(options, gruntlib.getconfig(),
+                                          args[1]))
 process = gnupg.run(gpgargs,
                     create_fhs=['stdin'],
                     attach_fhs={'stdout': outfile})
