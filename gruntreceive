@@ -71,8 +71,8 @@ username = base64.decodestring(username)
 if pwd.getpwuid(os.getuid())[0] != username:
     destuid, destgid = pwd.getpwnam(username)[2:4]
     os.setgroups([])
-    os.setregid(destgid)
-    os.setreuid(destuid)
+    os.setregid(destgid, destgid)
+    os.setreuid(destuid, destuid)
     
 assert pwd.getpwuid(os.getuid())[0] == username,\
        "Could not change to correct user"

@@ -31,7 +31,7 @@ build-stamp: configure-stamp
 	dh_testdir
 
 	# Add here commands to compile the package.
-	$(MAKE)
+	#$(MAKE)
 	#/usr/bin/docbook-to-man debian/grunt.sgml > grunt.1
 
 	touch build-stamp
@@ -53,15 +53,18 @@ install: build
 	dh_installdirs
 
 	# Add here commands to install the package into debian/grunt.
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/grunt
-
+	#$(MAKE) install DESTDIR=$(CURDIR)/debian/grunt
+	cp gruntreceive gruntsend debian/grunt/usr/bin
+	cp gruntreceive debian/grunt/usr/bin/gruntreceive-uucp
+	chown root.uucp debian/grunt/usr/bin/gruntreceive-uucp
+	chmod 4750 debian/grunt/usr/bin/gruntreceive-uucp
 
 # Build architecture-independent files here.
-binary-indep: build install
+binary-arch: build install
 # We have nothing to do by default.
 
 # Build architecture-dependent files here.
-binary-arch: build install
+binary-indep: build install
 	dh_testdir
 	dh_testroot
 #	dh_installdebconf	
@@ -81,7 +84,7 @@ binary-arch: build install
 	dh_link
 	dh_strip
 	dh_compress
-	dh_fixperms
+	dh_fixperms -Xgruntreceive-uucp
 #	dh_makeshlibs
 	dh_installdeb
 #	dh_perl
