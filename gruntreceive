@@ -182,7 +182,7 @@ try:
     if len(firstline):
         maxmd5age = long(firstline.strip())
         for line in efd.xreadlines():
-            recordedmd5, dateepoch, datestr = line.strip().split(':')
+            recordedmd5, dateepoch, datestr = line.strip().split('|')
             assert not recordedmd5 == thismd5,\
                    "ERROR: Detected attempt to resubmit existing request. DENIED."
             existingmd5s.append({'md5': recordedmd5,
@@ -200,7 +200,7 @@ try:
     multiplier = long(60 * 60 * 24)           # seconds in a day
     for entry in existingmd5s:
         if (now - entry['dateepoch']) < (maxmd5age * multiplier):
-            efd.write("%s:%d:%s\n" % (entry['md5'], entry['dateepoch'], entry['datestr']))
+            efd.write("%s|%d|%s\n" % (entry['md5'], entry['dateepoch'], entry['datestr']))
     efd.flush()
     efd.close()
 
