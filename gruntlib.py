@@ -17,6 +17,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import binascii, os, pwd, time, md5, fcntl, re
+from ConfigParser import ConfigParser
 
 def encode(binary):
     return binascii.b2a_base64(binary).strip()
