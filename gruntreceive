@@ -218,7 +218,8 @@ try:
     assert (now - long(sendertime)) < (maxmd5age * multiplier),\
            "Request submitted more than configured max age of %d days ago.  REJECTED." % maxmd5age
 
-    assert datafile.readline(1024).strip().startswith(':RANDOM:')
+    line = datafile.readline(1024).strip()
+    assert line.startswith(':RANDOM:'), "Line %s did not start with :RANDOM:" % line
     
     mode = re.search('^:MODE:(.+)$', datafile.readline(1024).strip()).group(1)
     mode = base64.decodestring(mode)
