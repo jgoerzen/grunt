@@ -1,3 +1,10 @@
+grunt (0.5.0-4) unstable; urgency=low
+
+  * Fixed optik name (really).  Closes: #252990.
+  * Uses python interpreter instead of python2.2.  Closes: #258724.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 13 Jul 2004 10:44:17 -0500
+
 grunt (0.5.0-3) unstable; urgency=low
 
   * Bumped to new Python and fixed new optik name.  Closes: #228383.

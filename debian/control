@@ -2,7 +2,7 @@ Source: grunt
 Section: utils
 Priority: optional
 Maintainer: John Goerzen <jgoerzen@complete.org>
-Build-Depends: debhelper (>> 3.0.0)
+Build-Depends: debhelper (>> 3.0.0), python-dev (>= 2.3), python (>= 2.3)
 Standards-Version: 3.5.2
 
 Package: grunt
