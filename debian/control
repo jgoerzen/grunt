@@ -21,3 +21,11 @@ Description: Secure remote execution via UUCP or e-mail using GPG
  .
  Commands run remotely can have their stdin supplied, and when executed,
  the stdin will be sent to them -- just like uucp can.
+
+Package: grunt-uucp
+Architecture: any
+Depends: grunt, ${shlibs:Depends}
+Description: Handler for incoming UUCP requests
+ grunt-uucp is the GRUNT handler for incoming UUCP requests.
+ It is essentially a wrapper around the regular gruntreceive program
+ to handle switching security contexts.

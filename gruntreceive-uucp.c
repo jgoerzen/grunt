@@ -55,10 +55,10 @@
 /* CONFIGURATION SECTION */
 
 #ifndef FULL_PATH	/* so that this can be specified from the Makefile */
-/* Uncomment the following line:
-#define FULL_PATH	"/full/path/of/script" 
-* Then comment out the #error line. */
-#error "You must define FULL_PATH somewhere"
+/* Uncomment the following line: */
+#define FULL_PATH	"/usr/bin/gruntreceive" 
+/* Then comment out the #error line. */
+/* #error "You must define FULL_PATH somewhere" */
 #endif
 #ifndef UMASK
 #define UMASK		077
@@ -77,7 +77,7 @@ char def_IFS[] = "IFS= \t\n";
 #ifdef __sgi
 char def_PATH[] = "PATH=/usr/bsd:/usr/bin:/bin:/usr/local/bin:/usr/sbin";
 #else
-char def_PATH[] = "PATH=/usr/ucb:/usr/bin:/bin:/usr/local/bin";
+char def_PATH[] = "PATH=/usr/bin:/bin:/usr/local/bin";
 #endif
 /* don't change def_CDPATH */
 char def_CDPATH[] = "CDPATH=.";
