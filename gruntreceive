@@ -77,11 +77,15 @@ if pwd.getpwuid(os.getuid())[0] != username:
 assert pwd.getpwuid(os.getuid())[0] == username,\
        "Could not change to correct user"
 
-HOMEDIR = pwd.getpwuid(os.getuid())[5] + '/.grunt'
+USERHOME = pwd.getpwuid(os.getuid())[5]
+HOMEDIR = USERHOME + '/.grunt'
 WORKDIR = HOMEDIR + '/work'
 assert os.path.isfile(HOMEDIR + '/validsigs.txt'),\
        "File %s does not exist" % (HOMEDIR + '/validsigs.txt')
-os.chdir(HOMEDIR)
+os.chdir(USERHOME)
+sys.env['HOME'] = USERHOME
+sys.env['LOGNAME'] = username
+sys.env['USER'] = username
 
 if not os.path.isdir(WORKDIR):
     os.mkdir(WORKDIR, 0700)
@@ -167,8 +171,10 @@ try:
     elif mode == 'PUT':
         outputfd = open(dest + '.gruntput', 'wb')
     copy(datafile, outputfd)
-    outputfd.close()
+    if mode == 'EXEC':
+        sys.exit(not outputfd.close() == None)
     if mode == 'PUT':
+        outputfd.close()
         os.rename(dest + '.gruntput', dest)
 finally:
     datafile.close()
