@@ -51,7 +51,7 @@ Where:
      a filename (for PUT mode)
      a command (for EXEC mode)
   "senderstr" is:
-     username:pid:time    time is seconds since epoch and may be int or float
+     username:pid:time    time is seconds since epoch and must not have fractional part.
   "randomstr" is a base64-encoded random string and is ignored
   by the receiver.
 
@@ -173,29 +173,33 @@ try:
     thismd5 = thismd5.hexdigest()
 
     existingmd5s = []
-    maxmd5s = 10000
+    maxmd5age = 60L # days
 
     efd_low = os.open(HOMEDIR + '/seenmd5s.txt', os.O_RDWR | os.O_CREAT)
     fcntl.flock(efd_low, fcntl.LOCK_EX)
     efd = os.fdopen(efd_low, 'r+')
     firstline = efd.readline()
     if len(firstline):
-        maxmd5s = int(firstline.strip())
+        maxmd5age = long(firstline.strip())
         for line in efd.xreadlines():
-            recordedmd5, recordeddate = line.strip().split(':')
+            recordedmd5, dateepoch, datestr = line.strip().split(':')
             assert not recordedmd5 == thismd5,\
                    "ERROR: Detected attempt to resubmit existing request. DENIED."
-            existingmd5s.append({'md5': recordedmd5, 'date': recordeddate})
+            existingmd5s.append({'md5': recordedmd5,
+                                 'dateepoch': long(dateepoch),
+                                 'datestr': datestr})
 
-    existingmd5s.append({'md5': thismd5, 'date': time.asctime()})
+    existingmd5s.append({'md5': thismd5,
+                         'dateepoch': long(time.time()),
+                         'datestr': time.asctime()})
 
     efd.seek(0, 0)
 
-    if len(existingmd5s) > maxmd5s:
-        existingmd5s = existingmd5s[-1 * maxmd5s:]
-
-    efd.write("%d\n" % maxmd5s)
+    efd.write("%d\n" % maxmd5age)
+    now = long(time.time())
+    multiplier = long(60 * 60 * 24)           # seconds in a day
     for entry in existingmd5s:
+        if (now - entry['dateepoch']) < (maxmd5age * multiplier):
         efd.write("%s:%s\n" % (entry['md5'], entry['date']))
     efd.flush()
     efd.close()
@@ -206,6 +210,15 @@ try:
     susername = re.search('^:USER:(.+)$', datafile.readline(1024).strip()).group(1)
     susername = base64.decodestring(susername)
     assert susername == username, 'FAILURE: secure packet username %s differs from regular username %s' % (susername, username)
+
+    senderstr = re.search('^:SENDER:(.+)$', datafile.readline(1024).strip()).group(1)
+    senderstr = base64.decodestring(senderstr)
+
+    senderusername, senderpid, sendertime = senderstr.split(':')
+    assert (now - long(sendertime)) < (maxmd5age * multiplier),\
+           "Request submitted more than configured max age of %d days ago.  REJECTED." % maxmd5age
+
+    assert datafile.readline(1024).strip().startswith(':RANDOM:')
     
     mode = re.search('^:MODE:(.+)$', datafile.readline(1024).strip()).group(1)
     mode = base64.decodestring(mode)
