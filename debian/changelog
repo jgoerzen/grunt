@@ -1,3 +1,9 @@
+grunt (0.5.0-2) unstable; urgency=low
+
+  * Bumped to new Python and fixed new optik name.  Closes: #228383.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue,  2 Mar 2004 21:24:34 -0600
+
 grunt (0.5.0-1) unstable; urgency=low
 
   * Initial Release.

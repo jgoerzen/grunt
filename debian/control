@@ -7,7 +7,7 @@ Standards-Version: 3.5.2
 
 Package: grunt
 Architecture: all
-Depends: python, python-gnupginterface, python-optik
+Depends: python (>= 2.3), python-gnupginterface
 Suggests: uucp, procmail | mailfilter
 Description: Secure remote execution via UUCP or e-mail using GPG
  GRUNT is a tool to let you execute commands remotely, offline.
