@@ -191,7 +191,7 @@ try:
 
     efd.seek(0, 0)
 
-    if len(existingmd5s > maxmd5s):
+    if len(existingmd5s) > maxmd5s:
         existingmd5s = existingmd5s[-1 * maxmd5s:]
 
     efd.write("%d\n" % maxmd5s)
