@@ -221,6 +221,8 @@ try:
     line = datafile.readline(1024).strip()
     assert line.startswith(':RANDOM:'), "Line %s did not start with :RANDOM:" % line
     
+    line = datafile.readline(1024).strip()
+    assert line.startswith(':MODE:'), "Line %s did not start with :MODE:" % line
     mode = re.search('^:MODE:(.+)$', datafile.readline(1024).strip()).group(1)
     mode = base64.decodestring(mode)
     
