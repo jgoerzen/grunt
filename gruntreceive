@@ -223,7 +223,7 @@ try:
     
     line = datafile.readline(1024).strip()
     assert line.startswith(':MODE:'), "Line %s did not start with :MODE:" % line
-    mode = re.search('^:MODE:(.+)$', datafile.readline(1024).strip()).group(1)
+    mode = re.search('^:MODE:(.+)$', line).group(1)
     mode = binascii.a2b_base64(mode)
     
     dest = re.search('^:DEST:(.+)$', datafile.readline(1024).strip()).group(1)
