@@ -83,9 +83,9 @@ WORKDIR = HOMEDIR + '/work'
 assert os.path.isfile(HOMEDIR + '/validsigs.txt'),\
        "File %s does not exist" % (HOMEDIR + '/validsigs.txt')
 os.chdir(USERHOME)
-sys.env['HOME'] = USERHOME
-sys.env['LOGNAME'] = username
-sys.env['USER'] = username
+os.environ['HOME'] = USERHOME
+os.environ['LOGNAME'] = username
+os.environ['USER'] = username
 
 if not os.path.isdir(WORKDIR):
     os.mkdir(WORKDIR, 0700)
