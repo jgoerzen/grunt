@@ -89,6 +89,9 @@ if not os.path.isdir(WORKDIR):
 tmpfilename = WORKDIR + '/workfile-%d-%s' % (os.getpid(), time.time())
 gnupg = GnuPGInterface.GnuPG()
 gnupg.options.meta_interactive = 0
+gnupg.options.quiet = 1
+gnupg.options.no_verbose = 1
+gnupg.options.no_greeting = 1
 process = gnupg.run(['--decrypt', '--output', tmpfilename],
                     create_fhs=['status', 'stdin'])
 if (os.fork() == 0):
@@ -113,7 +116,7 @@ while 1:
         signatory = statuswords[2]
     if statuswords[1] == 'BADSIG':
         goodsig = 0
-        
+process.wait()        
 if not goodsig:
     try:
         os.unlink(tmpfilename)
