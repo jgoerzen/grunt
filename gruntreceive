@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, binascii, md5, fcntl
+import sys, re, os, pwd, time, gruntlib, md5, fcntl
 from sys import stdin, stdout
 import pyme, pyme.core
 import GnuPGInterface
@@ -61,132 +61,100 @@ No line, post-base64ing, may exceed 1023 characters.
 
      """
 
-def copy(infile, outfile):
-    while 1:
-        data = infile.read(10240)
-        if not len(data):
-            return
-        outfile.write(data)
-    
-
 # Start processing.
 
-assert stdin.readline(1024).strip() == ':GRUNT:INSECUREHEADER:FORMAT-1I:'
-username = re.search('^:USER:(.+)$', stdin.readline(1024).strip()).group(1)
-username = binascii.a2b_base64(username)
-if pwd.getpwuid(os.getuid())[0] != username:
-    destuid, destgid = pwd.getpwnam(username)[2:4]
-    os.setgroups([])
-    os.setregid(destgid, destgid)
-    os.setreuid(destuid, destuid)
-    
-assert pwd.getpwuid(os.getuid())[0] == username,\
-       "Could not change to correct user"
+def setuid(username):
+    if pwd.getpwuid(os.getuid())[0] != username:
+        destuid, destgid = pwd.getpwnam(username)[2:4]
+        os.setgroups([])
+        os.setregid(destgid, destgid)
+        os.setreuid(destuid, destuid)
 
-USERHOME = pwd.getpwuid(os.getuid())[5]
-HOMEDIR = USERHOME + '/.grunt'
-WORKDIR = HOMEDIR + '/work'
-assert os.path.isfile(HOMEDIR + '/validsigs.txt'),\
-       "File %s does not exist" % (HOMEDIR + '/validsigs.txt')
-os.chdir(USERHOME)
-os.environ['HOME'] = USERHOME
-os.environ['LOGNAME'] = username
-os.environ['USER'] = username
+def processinsecureheader(fd):
+    gruntlib.findfirstheader(fd)
+    username = gruntlib.readwithcheck(fd, ':USER:')
+    setuid(username)
+    gruntlib.usernamecheck(username)
+    gruntlib.sanitizeenviron()
+    return username
 
-if not os.path.isdir(WORKDIR):
-    os.mkdir(WORKDIR, 0700)
-
-tmpfilename = WORKDIR + '/workfile-%d-%s' % (os.getpid(), time.time())
-gnupg = GnuPGInterface.GnuPG()
-gnupg.options.meta_interactive = 0
-gnupg.options.quiet = 1
-gnupg.options.no_verbose = 1
-gnupg.options.no_greeting = 1
-process = gnupg.run(['--decrypt', '--output', tmpfilename],
-                    create_fhs=['status', 'stdin', 'passphrase'])
-# We create this and then close it, so if some decrypted data comes in,
-# we don't try to read a passphrase from stdin.  Just fail.
-process.handles['passphrase'].close()
-if (os.fork() == 0):
-    # Copy process.
-    copy(stdin, process.handles['stdin'])
-    stdin.close()
-    process.handles['stdin'].close()
-    process.handles['status'].close()
-    sys.exit(0)
-else:
-    stdin.close()
-    process.handles['stdin'].close()
-goodsig = None
-signatory = None
-while 1:
-    status = process.handles['status'].readline()
-    if len(status) == 0:
-        break
-    statuswords = status.strip().split(' ')
-    if statuswords[1] == 'GOODSIG':
-        goodsig = 1
-        signatory = statuswords[2]
-    if statuswords[1] == 'BADSIG':
-        goodsig = 0
-process.wait()        
-if not goodsig:
-    try:
-        os.unlink(tmpfilename)
-    except OSError:
-        pass
-    raise ValueError, "FAILURE: no signature detected!"
-
-# Now, check to see if this signature is in the user's list of acceptable ones.
-
-shortsignatory = signatory[-8:]
-foundvalid = 0
-
-gsf = open(HOMEDIR + '/validsigs.txt')
-for line in gsf.readlines():
-    if line.strip() == shortsignatory or line.strip() == signatory:
-        foundvalid = 1
-        break
-gsf.close()
-
-if not foundvalid:
-    try:
-        os.unlink(tmpfilename)
-    except OSError:
-        pass
-    raise ValueError, "FAILURE: Key %s (%s) not found in list of valid keys."%\
-          (signatory, shortsignatory)
-
-##################### PAST HERE, the sig is good.
-
-
-
-
-datafile = open(tmpfilename)
-try:
-    #### Compute the md5 and see if we already have it.
-    thismd5 = md5.md5()
+def decryptit(inputfd, tmpfilename):
+    gnupg = GnuPGInterface.GnuPG()
+    gnupg.options.meta_interactive = 0
+    gnupg.options.quiet = 1
+    gnupg.options.no_verbose = 1
+    gnupg.options.no_greeting = 1
+    process = gnupg.run(['--decrypt', '--output', tmpfilename],
+                        create_fhs=['status', 'stdin', 'passphrase'])
+    # We create this and then close it, so if some decrypted data comes in,
+    # we don't try to read a passphrase from stdin.  Just fail.
+    process.handles['passphrase'].close()
+    if (os.fork() == 0):
+        # Copy process.
+        gruntlib.copy(inputfd, process.handles['stdin'])
+        inputfd.close()
+        process.handles['stdin'].close()
+        process.handles['status'].close()
+        sys.exit(0)
+    else:
+        inputfd.close()
+        process.handles['stdin'].close()
+    goodsig = None
+    signatory = None
     while 1:
-        chunk = datafile.read(10240)
-        if not len(chunk):
+        status = process.handles['status'].readline()
+        if len(status) == 0:
             break
-        thismd5.update(chunk)
-    datafile.seek(0, 0)
+        statuswords = status.strip().split(' ')
+        if statuswords[1] == 'GOODSIG':
+            goodsig = 1
+            signatory = statuswords[2]
+        if statuswords[1] == 'BADSIG':
+            goodsig = 0
+    process.wait()        
+    if not goodsig:
+        try:
+            os.unlink(tmpfilename)
+        except OSError:
+            pass
+        raise ValueError, "FAILURE: no signature detected!"
+    return (signatory, signatory[-8:])
 
-    thismd5 = thismd5.hexdigest()
+def process_and_validate(fd):
+    processinsecureheader(fd)
+    os.chdir(gruntlib.getuserhome())
+    gruntlib.checkforvalidsigsfile()
+    gruntlib.makegruntwork()
+    gruntlib.readwithcheck(fd, ':DATA:')
+    tmpfilename = gruntlib.gettmpfilename()
+    sigchecks = decryptit(fd, tmpfilename)
+    # Now, check to see if this signature is in the user's list of acceptable ones.
+    foundvalid = gruntlib.scanfileforlines(gruntlib.getvalidsigsfile(), sigchecks)
+
+    if not foundvalid:
+        try:
+            os.unlink(tmpfilename)
+        except OSError:
+            pass
+        raise ValueError, "FAILURE: Key %s (%s) not found in list of valid keys."%\
+              (signatory, shortsignatory)
+    return tmpfilename
+
+def checkmd5(datafile):
+    thismd5 = gruntlib.computemd5(datafile)
+    datafile.seek(0, 0)
 
     existingmd5s = []
     maxmd5age = 60L # days
 
-    efd_low = os.open(HOMEDIR + '/seenmd5s.txt', os.O_RDWR | os.O_CREAT)
-    fcntl.flock(efd_low, fcntl.LOCK_EX)
-    efd = os.fdopen(efd_low, 'r+')
+    efd = gruntlib.openwithlock(gruntlib.getgrunthome() + '/seenmd5s.txt')
     firstline = efd.readline()
     if len(firstline):
         maxmd5age = long(firstline.strip())
         for line in efd.xreadlines():
             recordedmd5, dateepoch, datestr = line.strip().split('|')
-            assert not recordedmd5 == thismd5,\
+            if recordedmd5 == thismd5:
+                raise ValueError,\
                    "ERROR: Detected attempt to resubmit existing request. DENIED."
             existingmd5s.append({'md5': recordedmd5,
                                  'dateepoch': long(dateepoch),
@@ -197,7 +165,6 @@ try:
                          'datestr': time.asctime()})
 
     efd.seek(0, 0)
-
     efd.write("%d\n" % maxmd5age)
     now = long(time.time())
     multiplier = long(60 * 60 * 24)           # seconds in a day
@@ -205,45 +172,70 @@ try:
         if abs(now - entry['dateepoch']) < (maxmd5age * multiplier):
             efd.write("%s|%d|%s\n" % (entry['md5'], entry['dateepoch'], entry['datestr']))
     efd.flush()
+    efd.truncate()
     efd.close()
+    return maxmd5age
 
-    # Good sig AND new request.  Process the data.
+def checksecureuser(datafile, insecureuser):
+    susername = gruntlib.readwithcheck(datafile, ':USER:')
+    if susername != insecureuser:
+        raise ValueError, \
+              'FAILURE: secure packet username %s differs from regular username %s' %\
+              (susername, insecureuser)
 
-    assert datafile.readline(1024).strip() == ':GRUNT:SECUREHEADER:FORMAT-1S:'
-    susername = re.search('^:USER:(.+)$', datafile.readline(1024).strip()).group(1)
-    susername = binascii.a2b_base64(susername)
-    assert susername == username, 'FAILURE: secure packet username %s differs from regular username %s' % (susername, username)
-
-    senderstr = re.search('^:SENDER:(.+)$', datafile.readline(1024).strip()).group(1)
-    senderstr = binascii.a2b_base64(senderstr)
+def checkage(fd, maxage):
+    senderstr = gruntlib.readwithcheck(fd, ':SENDER:')
 
     senderusername, senderpid, sendertime = senderstr.split(':')
-    assert abs(now - long(sendertime)) < (maxmd5age * multiplier / 2),\
-           "Request submitted more than half configured max age of %d days ago.  REJECTED." % maxmd5age
+    if abs(long(time.time()) - long(sendertime)) > (maxage * 60 * 60 * 24):
+        raise ValueError,\
+              "Requests older than one third the configured storage age, or %d days, are rejected.  This request is %d days old, so it is REJECTED." % \
+              (maxage, abs(long(time.time()) - long(sendertime)) / 60 / 60 / 24)
 
-    line = datafile.readline(1024).strip()
-    assert line.startswith(':RANDOM:'), "Line %s did not start with :RANDOM:" % line
-    
-    line = datafile.readline(1024).strip()
-    assert line.startswith(':MODE:'), "Line %s did not start with :MODE:" % line
-    mode = re.search('^:MODE:(.+)$', line).group(1)
-    mode = binascii.a2b_base64(mode)
-    
-    dest = re.search('^:DEST:(.+)$', datafile.readline(1024).strip()).group(1)
-    dest = binascii.a2b_base64(dest)
+def handleexec(infile, dest):
+    outputfd = os.popen(dest, 'w')
+    gruntlib.copy(infile, outputfd)
+    return (not outputfd.close() == None)
 
-    assert datafile.readline(1024).strip() == ':DATA:'
+def handleput(infile, dest):
+    outputfd = open(dest + '.gruntput', 'wb')
+    gruntlib.copy(infile, outputfd)
+    outputfd.close()
+    os.rename(dest + '.gruntput', dest)
+
+def handleputdir(infile, dest):
+    os.mkdir(dest + '.gruntput', 0777)
+    os.chdir(dest + '.gruntput')
+    outputfd = os.popen('tar -xvSpf -', 'w')
+    gruntlib.copy(infile, outputfd)
+    retval = outputfd.close()
+    os.chdir('..')
+    os.rename(dest + '.gruntput', dest)
+    return retval
+
+tmpfilename = process_and_validate(stdin)
+##################### PAST HERE, the sig is good.
+datafile = open(tmpfilename)
+
+try:
+    maxage = checkmd5(datafile)
+    #### Compute the md5 and see if we already have it.
+    # Good sig AND new request.  Process the data.
+    gruntlib.headercheck(datafile, 1)
+    checksecureuser(datafile, gruntlib.getusername())
+    checkage(datafile, maxage / 3)
+    gruntlib.readwithcheck(datafile, ':RANDOM:')
+    mode = gruntlib.readwithcheck(datafile, ':MODE:')
+    dest = gruntlib.readwithcheck(datafile, ':DEST:')
+    gruntlib.readwithcheck(datafile, ':DATA:')
 
     if mode == 'EXEC':
-        outputfd = os.popen(dest, 'w')
-    elif mode == 'PUT':
-        outputfd = open(dest + '.gruntput', 'wb')
-    copy(datafile, outputfd)
-    if mode == 'EXEC':
-        sys.exit(not outputfd.close() == None)
-    if mode == 'PUT':
-        outputfd.close()
-        os.rename(dest + '.gruntput', dest)
+        exitstatus = handleexec(datafile, dest)
+    elif mode == 'PUTFILE':
+        exitstatus = handleputfile(datafile, dest)
+    elif mode == 'PUTDIR':
+        exitstatus = handleputdir(datafile, dest)
 finally:
     datafile.close()
     os.unlink(tmpfilename)
+sys.exit(exitstatus)

@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, binascii
+import sys, re, os, pwd, time, gruntlib
 from sys import stdin, stdout, argv
 import pyme, pyme.core
 import GnuPGInterface
@@ -41,24 +41,22 @@ parser.add_option("-e", "--encrypt", dest = 'encrypt',
 if len(args) != 3:
     parser.print_help()
     sys.exit(1)
-    
-def copy(infile, outfile):
-    while 1:
-        data = infile.read(10240)
-        if not len(data):
-            return
-        outfile.write(data)
-    
 
-infile = open(args[0])
 assert args[1].find('!') != -1, 'e-mail mode not yet supported.'
+
 machine, user = re.search('^(.+)!([^!]+)$', args[1]).groups()
 outfile = os.popen("uux -z - '%s!gruntreceive-uucp'" % machine, 'w')
 
-outfile.write(":GRUNT:INSECUREHEADER:FORMAT-1I:\n")
-outfile.write(":USER:%s\n" % binascii.b2a_base64(user).strip())
-outfile.write(":DATA:\n")
+outfile.write(gruntlib.getheaders(user))
 outfile.flush()
+
+if os.path.isdir(args[0]):
+    os.chdir(args[0])
+    infile = os.popen('tar -cSpf - .', 'r')
+    mode = 'PUTDIR'
+else:
+    infile = open(args[0])
+    mode = 'PUTFILE'
 
 gnupg = GnuPGInterface.GnuPG()
 gnupg.options.meta_interactive = 1
@@ -70,25 +68,10 @@ process = gnupg.run(gpgargs,
                     create_fhs=['stdin'],
                     attach_fhs={'stdout': outfile})
 dataout = process.handles['stdin']
-dataout.write(":GRUNT:SECUREHEADER:FORMAT-1S:\n")
-dataout.write(":USER:%s\n" % binascii.b2a_base64(user).strip())
-dataout.write(":SENDER:%s\n" % \
-              binascii.b2a_base64("%s:%d:%d" % \
-                                  (pwd.getpwuid(os.getuid())[0],
-                                   os.getpid(),
-                                   long(time.time()))).strip())
-rndfd = open("/dev/urandom", "rb")
-rnddata = ''
-while len(rnddata) < 256:
-    rnddata += rndfd.read(256 - len(rnddata))
-rndfd.close()
-print len(rnddata)
-dataout.write(":RANDOM:%s\n" % binascii.b2a_base64(rnddata).strip())
-dataout.write(":MODE:%s\n" % binascii.b2a_base64('PUT').strip())
-dataout.write(":DEST:%s\n" % binascii.b2a_base64(args[2]).strip())
-dataout.write(":DATA:\n")
-copy(infile, dataout)
-infile.close()
+dataout.write(gruntlib.getheaders(user, mode, args[2], 1))
+gruntlib.copy(infile, dataout)
+assert not infile.close(), "Error reading data"
 dataout.close()
 process.wait()
+assert not outfile.close(), "Error writing data."
 print "Request successfully sent."

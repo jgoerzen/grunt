@@ -54,7 +54,8 @@ install: build
 
 	# Add here commands to install the package into debian/grunt.
 	#$(MAKE) install DESTDIR=$(CURDIR)/debian/grunt
-	cp gruntreceive gruntsend debian/grunt/usr/bin
+	cp gruntreceive gruntsend gruntrun debian/grunt/usr/bin
+	cp gruntlib.py debian/grunt/usr/lib/site-python
 	cp gruntreceive-uucp debian/grunt-uucp/usr/bin/gruntreceive-uucp
 	chown root.uucp debian/grunt-uucp/usr/bin/gruntreceive-uucp
 	chmod 4750 debian/grunt-uucp/usr/bin/gruntreceive-uucp

@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, binascii
+import sys, re, os, pwd, time, gruntlib
 from sys import stdin, stdout, argv
 import pyme, pyme.core
 import GnuPGInterface
@@ -44,20 +44,11 @@ if args[0] == '-':
     readstdin = 1
     args = args[1:]
 
-def copy(infile, outfile):
-    while 1:
-        data = infile.read(10240)
-        if not len(data):
-            return
-        outfile.write(data)
-    
 assert args[0].find('!') != -1, 'e-mail mode not yet supported.'
 machine, user = re.search('^(.+)!([^!]+)$', args[0]).groups()
 outfile = os.popen("uux -z - '%s!gruntreceive-uucp'" % machine, 'w')
 
-outfile.write(":GRUNT:INSECUREHEADER:FORMAT-1I:\n")
-outfile.write(":USER:%s\n" % binascii.b2a_base64(user).strip())
-outfile.write(":DATA:\n")
+outfile.write(gruntlib.getheaders(user))
 outfile.flush()
 
 gnupg = GnuPGInterface.GnuPG()
@@ -67,24 +58,10 @@ process = gnupg.run(['--sign'],
                     create_fhs=['stdin'],
                     attach_fhs={'stdout': outfile})
 dataout = process.handles['stdin']
-dataout.write(":GRUNT:SECUREHEADER:FORMAT-1S:\n")
-dataout.write(":USER:%s\n" % binascii.b2a_base64(user).strip())
-dataout.write(":SENDER:%s\n" % \
-              binascii.b2a_base64("%s:%d:%d" % \
-                                  (pwd.getpwuid(os.getuid())[0],
-                                   os.getpid(),
-                                   long(time.time()))).strip())
-rndfd = open("/dev/urandom", "rb")
-rnddata = ''
-while len(rnddata) < 256:
-    rnddata += rndfd.read(256 - len(rnddata))
-rndfd.close()
-dataout.write(":RANDOM:%s\n" % binascii.b2a_base64(rnddata).strip())
-dataout.write(":MODE:%s\n" % binascii.b2a_base64('EXEC').strip())
-dataout.write(":DEST:%s\n" % binascii.b2a_base64(args[1]).strip())
-dataout.write(":DATA:\n")
+dataout.write(gruntlib.getheaders(user, 'EXEC', args[1], 1))
 if readstdin:
-    copy(stdin, dataout)
+    gruntlib.copy(stdin, dataout)
 dataout.close()
 process.wait()
+assert outfile.close() == None, "Transport received error exit."
 print "Request successfully sent."
