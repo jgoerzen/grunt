@@ -19,7 +19,6 @@
 
 import sys, re, os, pwd, time, gruntlib, md5, fcntl
 from sys import stdin, stdout
-import pyme, pyme.core
 import GnuPGInterface
 
 """File format:

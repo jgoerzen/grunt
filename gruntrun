@@ -19,7 +19,6 @@
 
 import sys, re, os, pwd, time, gruntlib
 from sys import stdin, stdout, argv
-import pyme, pyme.core
 import GnuPGInterface
 from optik import OptionParser
 
