@@ -73,6 +73,7 @@ rnddata = ''
 while len(rnddata) < 256:
     rnddata += rndfd.read(256 - len(rnddata))
 rndfd.close()
+print len(rnddata)
 dataout.write(":RANDOM:%s\n" % base64.encodestring(rnddata).strip())
 dataout.write(":MODE:%s\n" % base64.encodestring('PUT').strip())
 dataout.write(":DEST:%s\n" % base64.encodestring(args[2]).strip())
