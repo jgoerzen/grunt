@@ -103,7 +103,10 @@ gnupg.options.quiet = 1
 gnupg.options.no_verbose = 1
 gnupg.options.no_greeting = 1
 process = gnupg.run(['--decrypt', '--output', tmpfilename],
-                    create_fhs=['status', 'stdin'])
+                    create_fhs=['status', 'stdin', 'passphrase'])
+# We create this and then close it, so if some decrypted data comes in,
+# we don't try to read a passphrase from stdin.  Just fail.
+process.handles['passphrase'].close()
 if (os.fork() == 0):
     # Copy process.
     copy(stdin, process.handles['stdin'])

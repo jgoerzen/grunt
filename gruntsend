@@ -21,19 +21,25 @@ import sys, re, os, pwd, time, binascii
 from sys import stdin, stdout, argv
 import pyme, pyme.core
 import GnuPGInterface
+from optik import OptionParser
 
-args = argv[1:]
+usage = """
+    USAGE: %prog filename delivery dest-filename
 
-if len(args) != 3:
-    print """
-    USAGE: gruntsend filename delivery dest-filename
-    WHERE:
     filename is the local file to send
 
     delivery is a UUCP path in the form of system!user OR
     an e-mail address in the form of user@system
 
     dest-filename is the location to place the data in on the remote."""
+
+parser = OptionParser(usage = usage)
+parser.add_option("-e", "--encrypt", dest = 'encrypt',
+                  metavar='RECIPIENT', help = 'Encrypt data to RECIPIENT')
+(options, args) = parser.parse_args()
+
+if len(args) != 3:
+    parser.print_help()
     sys.exit(1)
     
 def copy(infile, outfile):
@@ -57,7 +63,10 @@ outfile.flush()
 gnupg = GnuPGInterface.GnuPG()
 gnupg.options.meta_interactive = 1
 gnupg.options.armor = 1
-process = gnupg.run(['--sign'],
+gpgargs = ['--sign']
+if options.encrypt:
+    gpgargs.extend(['--encrypt', '--recipient', options.encrypt])
+process = gnupg.run(gpgargs,
                     create_fhs=['stdin'],
                     attach_fhs={'stdout': outfile})
 dataout = process.handles['stdin']
