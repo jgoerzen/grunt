@@ -1,0 +1,23 @@
+Source: grunt
+Section: utils
+Priority: optional
+Maintainer: John Goerzen <jgoerzen@complete.org>
+Build-Depends: debhelper (>> 3.0.0)
+Standards-Version: 3.5.2
+
+Package: grunt
+Architecture: all
+Depends: python, python-gnupginterface
+Suggests: uucp, procmail | mailfilter
+Description: Secure remote execution via UUCP or e-mail using GPG
+ GRUNT is a tool to let you execute commands remotely, offline.
+ It will also let you copy files to a remote machine.
+ .
+ To do that, it will use GPG to digitally sign data that you send
+ to your account on a remote machine.  If the signature is valid
+ and authorized, the remote will carry out the requested action or
+ save the included file.  Thus, it is similar to ssh, but for offline
+ use.
+ .
+ Commands run remotely can have their stdin supplied, and when executed,
+ the stdin will be sent to them -- just like uucp can.
