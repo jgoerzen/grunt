@@ -36,17 +36,14 @@ usage = """
 parser = OptionParser(usage = usage)
 parser.add_option("-e", "--encrypt", dest = 'encrypt',
                   metavar='RECIPIENT', help = 'Encrypt data to RECIPIENT')
+#gruntlib.addcommonoptions(parser)
 (options, args) = parser.parse_args()
 
 if len(args) != 3:
     parser.print_help()
     sys.exit(1)
 
-assert args[1].find('!') != -1, 'e-mail mode not yet supported.'
-
-machine, user = re.search('^(.+)!([^!]+)$', args[1]).groups()
-outfile = os.popen("uux -z - '%s!gruntreceive-uucp'" % machine, 'w')
-
+(user, outfile) = gruntlib.transportopen(args[1])
 outfile.write(gruntlib.getheaders(user))
 outfile.flush()
 

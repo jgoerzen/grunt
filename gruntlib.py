@@ -16,7 +16,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import binascii, os, pwd, time, md5, fcntl
+import binascii, os, pwd, time, md5, fcntl, re
 
 def encode(binary):
     return binascii.b2a_base64(binary).strip()
@@ -145,3 +145,31 @@ def openwithlock(filename):
     fd = os.open(filename, os.O_RDWR | os.O_CREAT)
     fcntl.flock(fd, fcntl.LOCK_EX)
     return os.fdopen(fd, 'r+')
+
+def transportopen(dest):
+    if dest.find('!') != -1:
+        return uucpopen(dest)
+    elif dest.find('@') != -1:
+        return emailopen(dest)
+    else:
+        raise ValueError, "Destination %s is not a valid e-mail address or UUCP path" % dest
+
+def uucpopen(dest):
+    machine, user = re.search('^(.+)!([^!]+)$', dest).groups()
+    outfile = os.popen("uux -z - '%s!gruntreceive-uucp'" % machine, 'w')
+    return (user, outfile)
+
+EMAILSUBJECT = '---GRUNT_SIGNED_JOB_EMAIL---'
+
+def emailopen(dest):
+    user,machine = re.search('^([^@]+)@(.+)$', dest).groups()
+    outfile = os.popen("mail -s '%s' -a 'X-Grunt-Request: yes' '%s'" %\
+                       (EMAILSUBJECT, dest), 'w')
+    return (user, outfile)
+
+def addcommonoptions(parser):
+    parser.add_option('-s', '--status-to', dest='status',
+                      metavar='EMAIL_ADDRESS',
+                      help = """Delivers output or command status
+                      from a successful invocation to EMAIL_ADDRESS
+                      (UUCP users can specify a bang path here).""")

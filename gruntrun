@@ -21,33 +21,28 @@ import sys, re, os, pwd, time, gruntlib
 from sys import stdin, stdout, argv
 import pyme, pyme.core
 import GnuPGInterface
+from optik import OptionParser
 
-args = argv[1:]
+usage = """
+    USAGE: gruntrun [options] delivery dest-command
 
-if len(args) != 2 and len(args) != 3:
-    print """
-    USAGE: gruntrun [-] delivery dest-command
-    WHERE:
-
-    - is optional, and if present, specifies that gruntrun should read
-    from stdin the input to pass to stdin of dest-command.  If - is not
-    given, there will be no input passed to stdin of dest-command.
-    
     delivery is a UUCP path in the form of system!user OR
     an e-mail address in the form of user@system
 
     dest-command is the command to run on the remote."""
+
+parser = OptionParser(usage = usage)
+parser.add_option('-i', '--input', dest='input',
+                  metavar='FILE',
+                  help = 'Specify a file to be included as standard input for the program on the remote machine.  If FILE is a hyphen (-), then standard input will be read and passed along as standard input on the remote.')
+#gruntlib.addcommonoptions(parser)
+(options, args) = parser.parse_args()
+
+if len(args) != 2:
+    parser.print_help()
     sys.exit(1)
-    
-readstdin = 0
-if args[0] == '-':
-    readstdin = 1
-    args = args[1:]
 
-assert args[0].find('!') != -1, 'e-mail mode not yet supported.'
-machine, user = re.search('^(.+)!([^!]+)$', args[0]).groups()
-outfile = os.popen("uux -z - '%s!gruntreceive-uucp'" % machine, 'w')
-
+(user, outfile) = gruntlib.transportopen(args[0])
 outfile.write(gruntlib.getheaders(user))
 outfile.flush()
 
@@ -59,8 +54,13 @@ process = gnupg.run(['--sign'],
                     attach_fhs={'stdout': outfile})
 dataout = process.handles['stdin']
 dataout.write(gruntlib.getheaders(user, 'EXEC', args[1], 1))
-if readstdin:
-    gruntlib.copy(stdin, dataout)
+if options.input:
+    if options.input == '-':
+        gruntlib.copy(stdin, dataout)
+    else:
+        infile = open(options.input, 'rb')
+        gruntlib.copy(infile, dataout)
+        infile.close()
 dataout.close()
 process.wait()
 assert outfile.close() == None, "Transport received error exit."

@@ -36,6 +36,7 @@ Signed/Encrypted:
 :RANDOM:randomstr
 :MODE:mode
 :DEST:destination
+:OUTPUT:destination:encryptkey  (if one is specified, so must the other, but encryptkey may be blank)
 :DATA:
 --data follows here--
 
@@ -197,7 +198,7 @@ def handleexec(infile, dest):
     gruntlib.copy(infile, outputfd)
     return (not outputfd.close() == None)
 
-def handleput(infile, dest):
+def handleputfile(infile, dest):
     outputfd = open(dest + '.gruntput', 'wb')
     gruntlib.copy(infile, outputfd)
     outputfd.close()
