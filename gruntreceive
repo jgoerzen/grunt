@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, base64, md5, fcntl
+import sys, re, os, pwd, time, binascii, md5, fcntl
 from sys import stdin, stdout
 import pyme, pyme.core
 import GnuPGInterface
@@ -73,7 +73,7 @@ def copy(infile, outfile):
 
 assert stdin.readline(1024).strip() == ':GRUNT:INSECUREHEADER:FORMAT-1I:'
 username = re.search('^:USER:(.+)$', stdin.readline(1024).strip()).group(1)
-username = base64.decodestring(username)
+username = binascii.a2b_base64(username)
 if pwd.getpwuid(os.getuid())[0] != username:
     destuid, destgid = pwd.getpwnam(username)[2:4]
     os.setgroups([])
@@ -208,11 +208,11 @@ try:
 
     assert datafile.readline(1024).strip() == ':GRUNT:SECUREHEADER:FORMAT-1S:'
     susername = re.search('^:USER:(.+)$', datafile.readline(1024).strip()).group(1)
-    susername = base64.decodestring(susername)
+    susername = binascii.a2b_base64(susername)
     assert susername == username, 'FAILURE: secure packet username %s differs from regular username %s' % (susername, username)
 
     senderstr = re.search('^:SENDER:(.+)$', datafile.readline(1024).strip()).group(1)
-    senderstr = base64.decodestring(senderstr)
+    senderstr = binascii.a2b_base64(senderstr)
 
     senderusername, senderpid, sendertime = senderstr.split(':')
     assert (now - long(sendertime)) < (maxmd5age * multiplier),\
@@ -224,10 +224,10 @@ try:
     line = datafile.readline(1024).strip()
     assert line.startswith(':MODE:'), "Line %s did not start with :MODE:" % line
     mode = re.search('^:MODE:(.+)$', datafile.readline(1024).strip()).group(1)
-    mode = base64.decodestring(mode)
+    mode = binascii.a2b_base64(mode)
     
     dest = re.search('^:DEST:(.+)$', datafile.readline(1024).strip()).group(1)
-    dest = base64.decodestring(dest)
+    dest = binascii.a2b_base64(dest)
 
     assert datafile.readline(1024).strip() == ':DATA:'
 

@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, base64
+import sys, re, os, pwd, time, binascii
 from sys import stdin, stdout, argv
 import pyme, pyme.core
 import GnuPGInterface
@@ -50,7 +50,7 @@ machine, user = re.search('^(.+)!([^!]+)$', args[1]).groups()
 outfile = os.popen("uux -z - '%s!gruntreceive-uucp'" % machine, 'w')
 
 outfile.write(":GRUNT:INSECUREHEADER:FORMAT-1I:\n")
-outfile.write(":USER:%s\n" % base64.encodestring(user).strip())
+outfile.write(":USER:%s\n" % binascii.b2a_base64(user).strip())
 outfile.write(":DATA:\n")
 outfile.flush()
 
@@ -62,9 +62,9 @@ process = gnupg.run(['--sign'],
                     attach_fhs={'stdout': outfile})
 dataout = process.handles['stdin']
 dataout.write(":GRUNT:SECUREHEADER:FORMAT-1S:\n")
-dataout.write(":USER:%s\n" % base64.encodestring(user).strip())
+dataout.write(":USER:%s\n" % binascii.b2a_base64(user).strip())
 dataout.write(":SENDER:%s\n" % \
-              base64.encodestring("%s:%d:%d" % \
+              binascii.b2a_base64("%s:%d:%d" % \
                                   (pwd.getpwuid(os.getuid())[0],
                                    os.getpid(),
                                    long(time.time()))).strip())
@@ -74,9 +74,9 @@ while len(rnddata) < 256:
     rnddata += rndfd.read(256 - len(rnddata))
 rndfd.close()
 print len(rnddata)
-dataout.write(":RANDOM:%s\n" % base64.encodestring(rnddata).strip())
-dataout.write(":MODE:%s\n" % base64.encodestring('PUT').strip())
-dataout.write(":DEST:%s\n" % base64.encodestring(args[2]).strip())
+dataout.write(":RANDOM:%s\n" % binascii.b2a_base64(rnddata).strip())
+dataout.write(":MODE:%s\n" % binascii.b2a_base64('PUT').strip())
+dataout.write(":DEST:%s\n" % binascii.b2a_base64(args[2]).strip())
 dataout.write(":DATA:\n")
 copy(infile, dataout)
 infile.close()
