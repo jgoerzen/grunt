@@ -199,7 +199,7 @@ try:
     now = long(time.time())
     multiplier = long(60 * 60 * 24)           # seconds in a day
     for entry in existingmd5s:
-        if (now - entry['dateepoch']) < (maxmd5age * multiplier):
+        if abs(now - entry['dateepoch']) < (maxmd5age * multiplier):
             efd.write("%s|%d|%s\n" % (entry['md5'], entry['dateepoch'], entry['datestr']))
     efd.flush()
     efd.close()
@@ -215,8 +215,8 @@ try:
     senderstr = binascii.a2b_base64(senderstr)
 
     senderusername, senderpid, sendertime = senderstr.split(':')
-    assert (now - long(sendertime)) < (maxmd5age * multiplier),\
-           "Request submitted more than configured max age of %d days ago.  REJECTED." % maxmd5age
+    assert abs(now - long(sendertime)) < (maxmd5age * multiplier / 2),\
+           "Request submitted more than half configured max age of %d days ago.  REJECTED." % maxmd5age
 
     line = datafile.readline(1024).strip()
     assert line.startswith(':RANDOM:'), "Line %s did not start with :RANDOM:" % line
