@@ -176,7 +176,7 @@ try:
     maxmd5s = 10000
 
     efd_low = os.open(HOMEDIR + '/seenmd5s.txt', os.O_RDWR | os.O_CREAT)
-    fcntl.flock(efd, fcntl.LOCK_EX)
+    fcntl.flock(efd_low, fcntl.LOCK_EX)
     efd = os.fdopen(efd_low, 'r+')
     firstline = efd.readline()
     if len(firstline):
