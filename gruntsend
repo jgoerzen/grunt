@@ -63,6 +63,17 @@ process = gnupg.run(['--sign'],
 dataout = process.handles['stdin']
 dataout.write(":GRUNT:SECUREHEADER:FORMAT-1S:\n")
 dataout.write(":USER:%s\n" % base64.encodestring(user).strip())
+dataout.write(":SENDER:%s\n" % \
+              base64.encodestring("%s:%s:%s" % \
+                                  (pwd.getpwuid(os.getuid())[0],
+                                   os.getpid(),
+                                   time.time())))
+rndfd = open("/dev/urandom", "rb")
+rnddata = ''
+while len(rnddata) < 256:
+    rnddata += rndfd.read(256 - len(rnddata))
+rndfd.close()
+dataout.write(":RANDOM:%s\n" % base64.encodestring(rnddata).strip())
 dataout.write(":MODE:%s\n" % base64.encodestring('PUT').strip())
 dataout.write(":DEST:%s\n" % base64.encodestring(args[2]).strip())
 dataout.write(":DATA:\n")

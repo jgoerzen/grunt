@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, base64
+import sys, re, os, pwd, time, base64, md5, fcntl
 from sys import stdin, stdout
 import pyme, pyme.core
 import GnuPGInterface
@@ -32,6 +32,8 @@ Plain:
 Signed/Encrypted:
 :GRUNT:SECUREHEADER:FORMAT-1S:
 :USER:username
+:SENDER:senderstr
+:RANDOM:randomstr
 :MODE:mode
 :DEST:destination
 :DATA:
@@ -48,6 +50,10 @@ Where:
   "destination" is:
      a filename (for PUT mode)
      a command (for EXEC mode)
+  "senderstr" is:
+     username:pid:time    time is seconds since epoch and may be int or float
+  "randomstr" is a base64-encoded random string and is ignored
+  by the receiver.
 
 All replaceable data (the lowercase stuff) must be base64-encoded.
 
@@ -148,11 +154,54 @@ if not foundvalid:
     raise ValueError, "FAILURE: Key %s (%s) not found in list of valid keys."%\
           (signatory, shortsignatory)
 
-# Good sig.  Process the data.
+##################### PAST HERE, the sig is good.
+
+
+
 
 datafile = open(tmpfilename)
-
 try:
+    #### Compute the md5 and see if we already have it.
+    thismd5 = md5.md5()
+    while 1:
+        chunk = datafile.read(10240)
+        if not len(chunk):
+            break
+        thismd5.update(chunk)
+    datafile.seek(0, 0)
+
+    thismd5 = thismd5.hexdigest()
+
+    existingmd5s = []
+    maxmd5s = 10000
+
+    efd_low = os.open(HOMEDIR + '/seenmd5s.txt', os.O_RDWR | os.O_CREAT)
+    fcntl.flock(efd, fcntl.LOCK_EX)
+    efd = os.fdopen(efd_low, 'r+')
+    firstline = efd.readline()
+    if len(firstline):
+        maxmd5s = int(firstline.strip())
+        for line in efd.xreadlines():
+            recordedmd5, recordeddate = line.strip().split(':')
+            assert not recordedmd5 == thismd5,\
+                   "ERROR: Detected attempt to resubmit existing request. DENIED."
+            existingmd5s.append({'md5': recordedmd5, 'date': recordeddate})
+
+    existingmd5s.append({'md5': thismd5, 'date': time.asctime()})
+
+    efd.seek(0, 0)
+
+    if len(existingmd5s > maxmd5s):
+        existingmd5s = existingmd5s[-1 * maxmd5s:]
+
+    efd.write("%d\n" % maxmd5s)
+    for entry in existingmd5s:
+        efd.write("%s:%s\n" % (entry['md5'], entry['date']))
+    efd.flush()
+    efd.close()
+
+    # Good sig AND new request.  Process the data.
+
     assert datafile.readline(1024).strip() == ':GRUNT:SECUREHEADER:FORMAT-1S:'
     susername = re.search('^:USER:(.+)$', datafile.readline(1024).strip()).group(1)
     susername = base64.decodestring(susername)
