@@ -1,6 +1,6 @@
 #!/usr/bin/python2.2
 
-import sys, re, os, pwd, time
+import sys, re, os, pwd, time, base64
 from sys import stdin, stdout
 import pyme, pyme.core
 import GnuPGInterface
@@ -8,12 +8,12 @@ import GnuPGInterface
 """File format:
 
 Plain:
-:GRUN:INSECUREHEADER:FORMAT-1I:
+:GRUNT:INSECUREHEADER:FORMAT-1I:
 :USER:username
 :DATA:
 
 Signed/Encrypted:
-:GRUN:SECUREHEADER:FORMAT-1S:
+:GRUNT:SECUREHEADER:FORMAT-1S:
 :USER:username
 :MODE:mode
 :DEST:destination
@@ -38,9 +38,17 @@ No line, post-base64ing, may exceed 1023 characters.
 
      """
 
+def copy(infile, outfile):
+    while 1:
+        data = infile.read(10240)
+        if not len(data):
+            return
+        outfile.write(data)
+    
+
 # Start processing.
 
-assert stdin.readline(1024).strip() == ':GRUN:INSECUREHEADER:FORMAT-1I:'
+assert stdin.readline(1024).strip() == ':GRUNT:INSECUREHEADER:FORMAT-1I:'
 username = re.search('^:USER:(.+)$', stdin.readline(1024).strip()).group(1)
 username = base64.decodestring(username)
 if pwd.getpwuid(os.getuid())[0] != username:
@@ -55,16 +63,27 @@ assert pwd.getpwuid(os.getuid())[0] == username,\
 HOMEDIR = pwd.getpwuid(os.getuid())[5] + '/.grunt'
 WORKDIR = HOMEDIR + '/work'
 assert os.path.isfile(HOMEDIR + '/validsigs.txt'),\
-       "File %s does not exist" % HOMEDIR + '/validsigs.txt'
+       "File %s does not exist" % (HOMEDIR + '/validsigs.txt')
+os.chdir(HOMEDIR)
 
 if not os.path.isdir(WORKDIR):
-    os.mkdir(WORKDIR, 0600)
+    os.mkdir(WORKDIR, 0700)
 
 tmpfilename = WORKDIR + '/workfile-%d-%s' % (os.getpid(), time.time())
 gnupg = GnuPGInterface.GnuPG()
+gnupg.options.meta_interactive = 0
 process = gnupg.run(['--decrypt', '--output', tmpfilename],
-                    create_fhs=['status'],
-                    attach_fhs={'stdin': stdin})
+                    create_fhs=['status', 'stdin'])
+if (os.fork() == 0):
+    # Copy process.
+    copy(stdin, process.handles['stdin'])
+    stdin.close()
+    process.handles['stdin'].close()
+    process.handles['status'].close()
+    sys.exit(0)
+else:
+    stdin.close()
+    process.handles['stdin'].close()
 goodsig = None
 signatory = None
 while 1:
@@ -80,7 +99,7 @@ while 1:
         
 if not goodsig:
     try:
-        os.unlink(workfile)
+        os.unlink(tmpfilename)
     except OSError:
         pass
     raise ValueError, "FAILURE: no signature detected!"
@@ -99,7 +118,7 @@ gsf.close()
 
 if not foundvalid:
     try:
-        os.unlink(workfile)
+        os.unlink(tmpfilename)
     except OSError:
         pass
     raise ValueError, "FAILURE: Key %s (%s) not found in list of valid keys."%\
@@ -110,7 +129,7 @@ if not foundvalid:
 datafile = open(tmpfilename)
 
 try:
-    assert datafile.readline(1024).strip() == ':GRUN:SECUREHEADER:FORMAT-1S:'
+    assert datafile.readline(1024).strip() == ':GRUNT:SECUREHEADER:FORMAT-1S:'
     susername = re.search('^:USER:(.+)$', datafile.readline(1024).strip()).group(1)
     susername = base64.decodestring(susername)
     assert susername == username, 'FAILURE: secure packet username %s differs from regular username %s' % (susername, username)
@@ -127,11 +146,7 @@ try:
         outputfd = os.popen(dest, 'w')
     elif mode == 'PUT':
         outputfd = open(dest + '.gruntput', 'wb')
-    while 1:
-        data = datafile.read(10240)
-        if not len(data):
-            break
-        outputfd.write(data)
+    copy(datafile, outputfd)
     outputfd.close()
     if mode == 'PUT':
         os.rename(dest + '.gruntput', dest)
