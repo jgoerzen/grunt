@@ -73,7 +73,7 @@ dataout.write(":SENDER:%s\n" % \
               base64.encodestring("%s:%d:%d" % \
                                   (pwd.getpwuid(os.getuid())[0],
                                    os.getpid(),
-                                   long(time.time()))))
+                                   long(time.time()))).strip())
 rndfd = open("/dev/urandom", "rb")
 rnddata = ''
 while len(rnddata) < 256:
