@@ -17,7 +17,9 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys, re, os, pwd, time, gruntlib
+import sys
+sys.path.append('/usr/share/grunt')
+import re, os, pwd, time, gruntlib
 from sys import stdin, stdout, argv
 import GnuPGInterface
 from optparse import OptionParser

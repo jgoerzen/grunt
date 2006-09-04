@@ -6,7 +6,7 @@
 #export DH_VERBOSE=1
 
 # This is the debhelper compatibility version to use.
-export DH_COMPAT=3
+export DH_COMPAT=4
 
 
 
@@ -55,7 +55,7 @@ install: build
 	# Add here commands to install the package into debian/grunt.
 	#$(MAKE) install DESTDIR=$(CURDIR)/debian/grunt
 	cp gruntreceive gruntsend gruntrun debian/grunt/usr/bin
-	cp gruntlib.py debian/grunt/usr/lib/site-python
+	cp gruntlib.py debian/grunt/usr/share/grunt
 	cp gruntreceive-uucp debian/grunt-uucp/usr/bin/gruntreceive-uucp
 	chown root.uucp debian/grunt-uucp/usr/bin/gruntreceive-uucp
 	chmod 4750 debian/grunt-uucp/usr/bin/gruntreceive-uucp
@@ -78,6 +78,7 @@ binary-arch: build install
 	dh_installinfo -a
 #	dh_undocumented
 	dh_installchangelogs -a
+	dh_pysupport -a
 	dh_link -a
 	dh_strip -a
 	dh_compress -a
@@ -107,6 +108,7 @@ binary-indep: build install
 	dh_installinfo -i
 #	dh_undocumented
 	dh_installchangelogs -i
+	dh_pysupport -i
 	dh_link -i
 	dh_strip -i
 	dh_compress -i
