@@ -1,3 +1,10 @@
+grunt (0.5.0-5) unstable; urgency=low
+
+  * ACK NMU -- thanks, Pierre.  Closes: #380836.
+  * Correct package description.  Closes: #355911.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon,  4 Sep 2006 09:22:30 -0500
+
 grunt (0.5.0-4.1) unstable; urgency=low
 
   * Non-maintainer upload.

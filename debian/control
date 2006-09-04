@@ -20,7 +20,7 @@ Description: Secure remote execution via UUCP or e-mail using GPG
  use.
  .
  Commands run remotely can have their stdin supplied, and when executed,
- the stdin will be sent to them -- just like uucp can.
+ the stdin supplied to grunt will be sent to the command.
 
 Package: grunt-uucp
 Architecture: any
