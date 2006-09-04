@@ -1,7 +1,8 @@
-grunt (0.5.0-5) unstable; urgency=low
+grunt (0.5.1) unstable; urgency=low
 
   * ACK NMU -- thanks, Pierre.  Closes: #380836.
   * Correct package description.  Closes: #355911.
+  * This is now a Debian native package.
 
  -- John Goerzen <jgoerzen@complete.org>  Mon,  4 Sep 2006 09:22:30 -0500
 
